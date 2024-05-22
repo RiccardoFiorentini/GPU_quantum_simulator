@@ -1,0 +1,208 @@
+Cuda Results
+Random num 5:
+Execution time: 3.520952
+Execution time: 3.364524
+Execution time: 3.471243
+Execution time: 3.292816
+Execution time: 3.535808
+----------
+Random num 6:
+Execution time: 3.924099
+Execution time: 4.821094
+Execution time: 4.534014
+Execution time: 4.479252
+Execution time: 4.219654
+----------
+Random num 7:
+Execution time: 4.376625
+Execution time: 4.437215
+Execution time: 5.012072
+Execution time: 5.283847
+Execution time: 4.210093
+----------
+Random num 8:
+Execution time: 6.732398
+Execution time: 4.722632
+Execution time: 5.990371
+Execution time: 5.084499
+Execution time: 5.207737
+----------
+Random num 9:
+Execution time: 5.709679
+Execution time: 5.329964
+Execution time: 5.504630
+Execution time: 5.258851
+Execution time: 5.569361
+----------
+Random num 10:
+Execution time: 6.347724
+Execution time: 6.049375
+Execution time: 5.761775
+Execution time: 6.129537
+Execution time: 7.061082
+----------
+Random num 11:
+Execution time: 6.739537
+Execution time: 6.903427
+Execution time: 7.037001
+Execution time: 6.329055
+Execution time: 8.531121
+----------
+Random num 12:
+Execution time: 9.120419
+Execution time: 6.550081
+Execution time: 6.971507
+Execution time: 7.280898
+Execution time: 7.925064
+----------
+Random num 13:
+Execution time: 8.660814
+Execution time: 8.025626
+Execution time: 10.901311
+Execution time: 8.149270
+Execution time: 7.396978
+----------
+Random num 14:
+Execution time: 8.929072
+Execution time: 8.195930
+Execution time: 7.632706
+Execution time: 9.200245
+Execution time: 11.198667
+----------
+Random num 15:
+Execution time: 9.336249
+Execution time: 8.637412
+Execution time: 8.509328
+Execution time: 9.374357
+Execution time: 8.247159
+----------
+Random num 16:
+Execution time: 9.933413
+Execution time: 8.589776
+Execution time: 8.530101
+Execution time: 8.715517
+Execution time: 8.951304
+----------
+Random num 17:
+Execution time: 10.323602
+Execution time: 9.496587
+Execution time: 9.406730
+Execution time: 10.308596
+Execution time: 9.335811
+----------
+Random num 18:
+Execution time: 21.142378
+Execution time: 18.868150
+Execution time: 20.675530
+Execution time: 21.060201
+Execution time: 20.205978
+----------
+Random num 19:
+Execution time: 39.686951
+Execution time: 48.363722
+Execution time: 47.172400
+Execution time: 47.485480
+Execution time: 46.340666
+----------
+Random num 20:
+----------
+===================
+Cpp Results
+Random num 5:
+Execution time: 1.834370 
+Execution time: 1.452488 
+Execution time: 1.426361 
+Execution time: 1.507549 
+Execution time: 1.514526 
+----------
+Random num 6:
+Execution time: 2.348706 
+Execution time: 2.031582 
+Execution time: 1.912205 
+Execution time: 1.907208 
+Execution time: 1.922412 
+----------
+Random num 7:
+Execution time: 3.310305 
+Execution time: 2.691921 
+Execution time: 2.716865 
+Execution time: 2.685841 
+Execution time: 2.682584 
+----------
+Random num 8:
+Execution time: 4.664743 
+Execution time: 4.074712 
+Execution time: 4.384863 
+Execution time: 4.133466 
+Execution time: 5.279039 
+----------
+Random num 9:
+Execution time: 8.113150 
+Execution time: 7.000509 
+Execution time: 6.975921 
+Execution time: 7.455859 
+Execution time: 6.848394 
+----------
+Random num 10:
+Execution time: 13.978811 
+Execution time: 12.918143 
+Execution time: 12.476536 
+Execution time: 12.512935 
+Execution time: 5.591371 
+----------
+Random num 11:
+Execution time: 5.605286 
+Execution time: 5.121057 
+Execution time: 5.245518 
+Execution time: 5.086532 
+Execution time: 5.132226 
+----------
+Random num 12:
+Execution time: 11.671873 
+Execution time: 10.992390 
+Execution time: 11.074190 
+Execution time: 10.462613 
+Execution time: 11.523007 
+----------
+Random num 13:
+Execution time: 28.676441 
+Execution time: 24.782369 
+Execution time: 23.144848 
+Execution time: 23.167408 
+Execution time: 30.716930 
+----------
+Random num 14:
+Execution time: 47.794426 
+Execution time: 48.518148 
+Execution time: 48.787309 
+Execution time: 46.692220 
+Execution time: 49.163256 
+----------
+Random num 15:
+Execution time: 105.849151 
+Execution time: 105.688962 
+Execution time: 101.866731 
+Execution time: 104.080953 
+Execution time: 107.511418 
+----------
+Random num 16:
+Execution time: 231.084692 
+Execution time: 213.961352 
+Execution time: 214.150129 
+Execution time: 214.043163 
+Execution time: 212.407597 
+----------
+Random num 17:
+Execution time: 469.908696 
+Execution time: 442.300778 
+Execution time: 441.794896 
+Execution time: 436.961592 
+Execution time: 519.728864 
+----------
+Random num 18:
+Execution time: 908.796474 
+Execution time: 919.642603 
+Execution time: 900.002454 
+Execution time: 887.173795 
+Execution time: 880.228230 
+----------
