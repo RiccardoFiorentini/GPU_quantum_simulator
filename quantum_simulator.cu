@@ -131,7 +131,7 @@ int main(int argc, char *argv[]){
     unitary Ur, Ui;
     float tmpFloat = 1;
     double t_start, t_end, t_exe;
-
+    float *sv_r, *sv_i;
     if(argc < 2){
         printf("QUANTUM CIRCUIT SIMULATOR\n");
         printf("Usage: %s <circuit_file_name>\n",argv[0]);
@@ -142,7 +142,8 @@ int main(int argc, char *argv[]){
 
     parse_circuit(argv[1], &num_q, &num_g, &gate_r, &gate_i, &target, &cnot_arg);
 
-    float sv_r[((1LLU)<<num_q)], sv_i[((1LLU)<<num_q)];
+    sv_r = (float*)malloc(sizeof(float)*((1LLU)<<num_q));
+    sv_i = (float*)malloc(sizeof(float)*((1LLU)<<num_q));
 
     CHECK(cudaMalloc(&d_state_vec_r, ((1LLU)<<num_q)*sizeof(float)));
     CHECK(cudaMalloc(&d_state_vec_i, ((1LLU)<<num_q)*sizeof(float)));
@@ -213,7 +214,9 @@ int main(int argc, char *argv[]){
     }*/
 
     //printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
-    printf("Execution time: %lf\n", t_exe);
+    printf("%lf\n", t_exe);
+    free(sv_i);
+    free(sv_r);
 
     return 0;
 }

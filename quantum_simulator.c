@@ -245,7 +245,7 @@ complex *compute_state_vector(char *filename, int *num_q){
     fclose(f);
     
     t_exe = t_end - t_start;
-    printf("Execution time: %lf \n", t_exe);
+    printf("%lf\n", t_exe);
 
     (*num_q) = qubit_num;
 
