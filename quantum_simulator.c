@@ -6,7 +6,7 @@
 #include <complex.h>
 #include <time.h>
 
-#define PI  (asin(1))
+#define PI  (2*asin(1))
 #define GATE_MAX_LEN 63
 #define UNITARY_DIM 4
 
