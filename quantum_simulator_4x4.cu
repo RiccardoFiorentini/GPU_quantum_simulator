@@ -282,13 +282,10 @@ bool isIdentity(unitary *m_r, unitary *m_i){
 
 int main(int argc, char *argv[]){
 
-    int num_q, num_g, num_m;
-    double *cumul;
-    long long meas;
+    int num_q, num_g;
     float *gate_r, *gate_i, *d_state_vec_r, *d_state_vec_i;
     char *target, *cnot_arg;
     unitary Ur, Ui;
-    float tmpFloat = 1;
     double t_start, t_end, t_exe;
 
     unitary *acc_r;
@@ -308,8 +305,8 @@ int main(int argc, char *argv[]){
     cnotTo4x4(&cnotCLS,&cnotIm,0);
 
     //Identity
-    unitary4 iden_r;
-    unitary4 iden_i;
+    unitary iden_r;
+    unitary iden_i;
     initM2(&iden_r, &iden_i);
 
     //Temporary matrices
@@ -408,8 +405,8 @@ int main(int argc, char *argv[]){
                             d_state_vec_r,
                             d_state_vec_i,
                             num_q,
-                            acc4_r[MIN(target[i],bit_state[target[i]])],
-                            acc4_i[MIN(target[i],bit_state[target[i]])],
+                            acc_r[target[i]], 
+                            acc_i[target[i]], 
                             (int)target[i]
                         );
 
@@ -434,6 +431,8 @@ int main(int argc, char *argv[]){
                         d_state_vec_r,
                         d_state_vec_i,
                         num_q,
+                        acc4_r[MIN(target[i],bit_state[target[i]])],
+                        acc4_i[MIN(target[i],bit_state[target[i]])],
                         (int)MAX(target[i],bit_state[target[i]]),
                         (int)MIN(target[i],bit_state[target[i]])
                     );
@@ -451,8 +450,8 @@ int main(int argc, char *argv[]){
                             d_state_vec_r,
                             d_state_vec_i,
                             num_q,
-                            acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],
-                            acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],
+                            acc_r[cnot_arg[i]],
+                            acc_i[cnot_arg[i]],
                             (int)cnot_arg[i]
                         );
                         initM2(&acc_r[cnot_arg[i]], &acc_i[cnot_arg[i]]);
@@ -476,6 +475,8 @@ int main(int argc, char *argv[]){
                         d_state_vec_r,
                         d_state_vec_i,
                         num_q,
+                        acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],
+                        acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],
                         (int)MAX(cnot_arg[i],bit_state[cnot_arg[i]]),
                         (int)MIN(cnot_arg[i],bit_state[cnot_arg[i]])
                     );
@@ -523,6 +524,8 @@ int main(int argc, char *argv[]){
                 d_state_vec_r,
                 d_state_vec_i,
                 num_q,
+                acc4_r[i],
+                acc4_i[i],
                 bit_state[i],
                 i
             );
@@ -551,7 +554,7 @@ int main(int argc, char *argv[]){
     free(target);
     free(cnot_arg);
 
-    /* long long unsigned max_idx;
+    long long unsigned max_idx;
     float max_p = -1;
     float prob;
 
@@ -566,7 +569,6 @@ int main(int argc, char *argv[]){
     free(sv_r);
     free(sv_i);
     printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
-    */
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);
@@ -577,8 +579,7 @@ int main(int argc, char *argv[]){
 void parse_circuit(char *filename, int *num_q, int *num_g, float **gate_r, float **gate_i, char **target, char **cnot_arg){
     FILE *f;
     char c;
-    int qubit_num = 0;
-    int curr_qubit,curr_qubit2;
+
     char gate_name[GATE_MAX_LEN+1];
     int str_l;
     float arg;
