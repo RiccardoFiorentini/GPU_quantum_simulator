@@ -558,7 +558,7 @@ int main(int argc, char *argv[]){
     float max_p = -1;
     float prob;
 
-    for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
+    /*for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
         prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
         if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
         if(prob > max_p){
@@ -569,6 +569,7 @@ int main(int argc, char *argv[]){
     free(sv_r);
     free(sv_i);
     printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
+    */
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);
