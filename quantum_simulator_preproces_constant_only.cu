@@ -28,7 +28,7 @@
 #define IS_CX_OP 1
 #define NUMTHREAD 1024
 #define NUMBLOCKS 1
-#define MAX_COSTANT 1900
+#define MAX_COSTANT 1927
 
 #define CHECK(call)                                                                       \
 {                                                                                     \

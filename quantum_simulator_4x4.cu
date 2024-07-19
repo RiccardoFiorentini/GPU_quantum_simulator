@@ -554,7 +554,7 @@ int main(int argc, char *argv[]){
     free(target);
     free(cnot_arg);
 
-    /* long long unsigned max_idx;
+    long long unsigned max_idx;
     float max_p = -1;
     float prob;
 
@@ -565,10 +565,10 @@ int main(int argc, char *argv[]){
             max_p = prob;
             max_idx = i;
         }
-    } */
+    }
     free(sv_r);
     free(sv_i);
-    //printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
+    printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);
