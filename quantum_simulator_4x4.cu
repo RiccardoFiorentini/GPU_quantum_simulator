@@ -410,11 +410,9 @@ int main(int argc, char *argv[]){
                     if(target[i] < bit_state[target[i]]){
                         tensorProd(&acc_r[bit_state[target[i]]],&acc_i[bit_state[target[i]]],&acc_r[target[i]],&acc_i[target[i]],&tmp4_r,&tmp4_i);
                         mm4x4(&tmp4_r,&acc4_r[MIN(target[i],bit_state[target[i]])],&tmp4_i,&acc4_i[MIN(target[i],bit_state[target[i]])]);
-                        mm4x4(&cnotCLS,&acc4_r[MIN(target[i],bit_state[target[i]])],&cnotIm,&acc4_i[MIN(target[i],bit_state[target[i]])]);
                     }else{
                         tensorProd(&acc_r[target[i]],&acc_i[target[i]],&acc_r[bit_state[target[i]]],&acc_i[bit_state[target[i]]],&tmp4_r,&tmp4_i);
                         mm4x4(&tmp4_r,&acc4_r[MIN(target[i],bit_state[target[i]])],&tmp4_i,&acc4_i[MIN(target[i],bit_state[target[i]])]);
-                        mm4x4(&cnotCMS,&acc4_r[MIN(target[i],bit_state[target[i]])],&cnotIm,&acc4_i[MIN(target[i],bit_state[target[i]])]);
                     }
                     initM2(&acc_r[target[i]], &acc_i[target[i]]);
                     initM2(&acc_r[bit_state[target[i]]], &acc_i[bit_state[target[i]]]);
@@ -454,11 +452,9 @@ int main(int argc, char *argv[]){
                     if(cnot_arg[i] < bit_state[cnot_arg[i]]){
                         tensorProd(&acc_r[bit_state[cnot_arg[i]]],&acc_i[bit_state[cnot_arg[i]]],&acc_r[cnot_arg[i]],&acc_i[cnot_arg[i]],&tmp4_r,&tmp4_i);
                         mm4x4(&tmp4_r,&acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],&tmp4_i,&acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])]);
-                        mm4x4(&cnotCLS,&acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],&cnotIm,&acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])]);
                     }else{
                         tensorProd(&acc_r[cnot_arg[i]],&acc_i[cnot_arg[i]],&acc_r[bit_state[cnot_arg[i]]],&acc_i[bit_state[cnot_arg[i]]],&tmp4_r,&tmp4_i);
                         mm4x4(&tmp4_r,&acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],&tmp4_i,&acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])]);
-                        mm4x4(&cnotCMS,&acc4_r[MIN(cnot_arg[i],bit_state[cnot_arg[i]])],&cnotIm,&acc4_i[MIN(cnot_arg[i],bit_state[cnot_arg[i]])]);
                     }
                     initM2(&acc_r[cnot_arg[i]], &acc_i[cnot_arg[i]]);
                     initM2(&acc_r[bit_state[cnot_arg[i]]], &acc_i[bit_state[cnot_arg[i]]]);
@@ -480,6 +476,9 @@ int main(int argc, char *argv[]){
                 }
 
                 //INSERT NEW CNOT IN ACCUMULATOR
+                if(bit_state[target[i]]!=SINGLE_ACC_STATE) bit_state[bit_state[target[i]]] = SINGLE_ACC_STATE;
+                if(bit_state[cnot_arg[i]]!=SINGLE_ACC_STATE) bit_state[bit_state[cnot_arg[i]]] = SINGLE_ACC_STATE;
+
                 bit_state[target[i]] = cnot_arg[i];
                 bit_state[cnot_arg[i]] = target[i];
 
