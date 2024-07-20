@@ -427,7 +427,7 @@ int main(int argc, char *argv[]){
             );*/
         }
         //cudaDeviceSynchronize();
-        CHECK_KERNELCALL();
+        //CHECK_KERNELCALL();
     }
 
     /*Permute the qubits*/
@@ -446,10 +446,10 @@ int main(int argc, char *argv[]){
     quicksort(histogram,permutation,0,num_q-1);
     free(histogram);
     for(int i=0; i<numOp; i++){
-        if(VecArg[numOp] != (int)IS_NOT_CX_OP){
-            VecArg[numOp] = permutation[VecArg[numOp]];
+        if(VecArg[i] != (int)IS_NOT_CX_OP){
+            VecArg[i] = permutation[VecArg[i]];
         }
-        VecTarg[numOp] = permutation[VecTarg[numOp]];
+        VecTarg[i] = permutation[VecTarg[i]];
     }
     /*Qubit permutation end*/
 
