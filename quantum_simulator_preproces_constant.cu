@@ -121,10 +121,6 @@ __device__ void gate_texture(float *vr, float *vi, int num_q, int op,  int targe
     Ur.val[1] = tex1Dfetch<float>(texUr, 4 * op + 1);
     Ur.val[2] = tex1Dfetch<float>(texUr, 4 * op + 2);
     Ur.val[3] = tex1Dfetch<float>(texUr, 4 * op + 3);
-
-    if(th_id==0){
-        printf("%f, %f, %f, %f \n", Ui.val[0], Ui.val[1], Ui.val[2], Ui.val[3]);
-    }
     
     for(int i = th_id; i<(1LLU<<(num_q-1)); i+=NUMTHREAD){
         
@@ -420,7 +416,7 @@ int main(int argc, char *argv[]){
     }
 
     if(numOp>MAX_COSTANT){
-        printf("Sei in TEXTURE \n");
+        //printf("Sei in TEXTURE \n");
         //usa texture
         cudaMalloc((void**)&d_Tex_Arg, numOp * sizeof(char));
         cudaMalloc((void**)&d_Tex_Targ, numOp * sizeof(char));
@@ -497,7 +493,7 @@ int main(int argc, char *argv[]){
         cudaFree(d_Tex_Ur);
 
     }else{
-        printf("Sei in COSTANT \n");
+        //printf("Sei in COSTANT \n");
         //passa a GPU in constant mem l'elenco di operazioni -> da vedere come fare per la costant
         cudaMemcpyToSymbol(d_Arg, VecArg, numOp*sizeof(char));
         cudaMemcpyToSymbol(d_Targ, VecTarg, numOp*sizeof(char));

@@ -84,13 +84,6 @@ __global__ void kernel_gate_2(float *vr, float *vi, int num_q, unitary Ur, unita
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
     long long int pos0, pos1;
-
-    /* if(th_id == 0 && Ur.val[0]!=1.0){
-        printf("%f, %f, %f, %f \n", Ur.val[0], Ur.val[1], Ur.val[2], Ur.val[3]);
-        printf("%f, %f, %f, %f \n", Ui.val[0], Ui.val[1], Ui.val[2], Ui.val[3]);
-
-        printf("\n");
-    } */
     
     if(th_id < (1LLU<<(num_q-1))){
         
