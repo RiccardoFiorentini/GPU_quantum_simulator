@@ -373,6 +373,7 @@ int main(int argc, char *argv[]){
     /*Permute the qubits*/
     int *histogram = (int*)malloc(sizeof(int)*num_q);
     int *permutation = (int*)malloc(sizeof(int)*num_q);
+    int *antipermutation = (int*)malloc(sizeof(int)*num_q);
     for(int i=0; i<num_q; i++){
         histogram[i] = 0;
         permutation[i] = i;
@@ -445,11 +446,14 @@ int main(int argc, char *argv[]){
 
     quicksort(histogram,permutation,0,num_q-1);
     free(histogram);
+    for(int i=0; i<num_q; i++){
+      antipermutation[permutation[i]] = i;
+    }
     for(int i=0; i<num_g; i++){
         if(cnot_arg[i] != IS_NOT_CX_OP){
-            cnot_arg[i] = permutation[cnot_arg[i]];
+            cnot_arg[i] = antipermutation[cnot_arg[i]];
         }
-        target[i] = permutation[target[i]];
+        target[i] = antipermutation[target[i]];
     }
     /*Qubit permutation end*/
 
