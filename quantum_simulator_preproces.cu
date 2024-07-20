@@ -309,7 +309,7 @@ int main(int argc, char *argv[]){
             );
         }
         //cudaDeviceSynchronize();
-        CHECK_KERNELCALL();
+        //CHECK_KERNELCALL();
     }
 
     numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
