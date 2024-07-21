@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#per dynamic: nvcc -rdc=true -lcudadevrt quantum_simulator_preproces_dynamic.cu -o tmp
 # Define the number of times to run
 NUM_RUNS=5
 

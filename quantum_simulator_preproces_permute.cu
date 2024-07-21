@@ -265,13 +265,10 @@ void quicksort(int *hist , int *perm, int begin, int end){
 }
 
 int main(int argc, char *argv[]){
-    int num_q, num_g, num_m;
-    double *cumul;
-    long long meas;
+    int num_q, num_g;
     float *gate_r, *gate_i, *d_state_vec_r, *d_state_vec_i;
     char *target, *cnot_arg;
     unitary Ur, Ui;
-    float tmpFloat = 1;
     double t_start, t_end, t_exe;
     unitary *acc_r;
     unitary *acc_i;
@@ -283,8 +280,7 @@ int main(int argc, char *argv[]){
 
     //Salva operazioni in ordine, da vedere come trasformare in array
     float *VecGate_r, *VecGate_i;
-    unitary *d_VecGate_r, *d_VecGate_i;
-    char *VecTarg, *VecArg, *d_VecTarg, *d_VecArg;
+    char *VecTarg, *VecArg;
     int numOp;
         
     if(argc < 2){
@@ -622,8 +618,6 @@ int main(int argc, char *argv[]){
 void parse_circuit(char *filename, int *num_q, int *num_g, float **gate_r, float **gate_i, char **target, char **cnot_arg){
     FILE *f;
     char c;
-    int qubit_num = 0;
-    int curr_qubit,curr_qubit2;
     char gate_name[GATE_MAX_LEN+1];
     int str_l;
     float arg;

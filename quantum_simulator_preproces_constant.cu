@@ -532,9 +532,9 @@ int main(int argc, char *argv[]){
     free(target);
     free(cnot_arg);
 
-    long long unsigned max_idx;
-    float max_p = -1;
-    float prob;
+    //long long unsigned max_idx;
+    //float max_p = -1;
+    //float prob;
 
     /*for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
         prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
