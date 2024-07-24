@@ -72,6 +72,7 @@ double get_time(){
     return tv.tv_sec + tv.tv_usec * 1e-6;
 }
 
+//initialization of the state vector
 __global__ void init_state_vector(float *vr, float *vi, int num_q){
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
     if(th_id < (1LLU<<(num_q))){
@@ -80,6 +81,7 @@ __global__ void init_state_vector(float *vr, float *vi, int num_q){
     }
 }
 
+//2x2 kernel
 __global__ void kernel_gate_2(float *vr, float *vi, int num_q, unitary Ur, unitary Ui, int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
@@ -103,6 +105,7 @@ __global__ void kernel_gate_2(float *vr, float *vi, int num_q, unitary Ur, unita
     }
 }
 
+//4x4 kernel
 __global__ void kernel_gate_4(float *vr, float *vi, int num_q, unitary4 Ur, unitary4 Ui, int target1, int target2){
     float tmp00_r, tmp00_i, tmp01_r, tmp01_i, tmp10_r, tmp10_i, tmp11_r, tmp11_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
@@ -142,32 +145,6 @@ __global__ void kernel_gate_4(float *vr, float *vi, int num_q, unitary4 Ur, unit
     }
 }
 
-__global__ void kernel_cnot(float *vr, float *vi, int num_q, int control, int target){
-    float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
-    int th_id = blockIdx.x*blockDim.x + threadIdx.x;
-    long long int pos0, pos1;
-
-    int min_idx, max_idx;
-    if(th_id < (1LLU<<(num_q-2))){
-        min_idx = control < target ? control : target;
-        max_idx = control > target ? control : target;
-
-        pos0 = ((th_id>>(max_idx-1))<<(max_idx+1)) | (((th_id&(((1LLU)<<(max_idx-1))-1))>>min_idx)<<(min_idx+1)) | (th_id&(((1LLU)<<min_idx)-1)) | (((1LLU)<<control));
-        pos1 = pos0|((1LLU)<<target);
-
-        tmp0_r = vr[pos1];
-        tmp0_i = vi[pos1];
-
-        tmp1_r = vr[pos0];
-        tmp1_i = vi[pos0];
-
-        vr[pos0] = tmp0_r;
-        vr[pos1] = tmp1_r;
-        vi[pos0] = tmp0_i;
-        vi[pos1] = tmp1_i;
-
-    }
-}
 
 void mm2x2(unitary *m1_r, unitary *m2_r, unitary *m1_i, unitary *m2_i){
     unitary tmp_r;
@@ -240,7 +217,7 @@ void cnotTo4x4(unitary4 *u_r, unitary4 *u_i, int c_is_msb){
     }
 }
 
-//MSB as m1, LSB as m2
+//Tensor product: MSB as m1, LSB as m2
 void tensorProd(unitary * m1_r, unitary *m1_i, unitary *m2_r, unitary *m2_i, unitary4 *u4_r, unitary4 *u4_i){
     int i1, i2, j1, j2;
     for(int i=0; i<4; i++){
@@ -455,7 +432,6 @@ int main(int argc, char *argv[]){
         }
         target[i] = antipermutation[target[i]];
     }
-    /*Qubit permutation end*/
 
     for(int i=0; i<num_q; i++){
         bit_state[i] = SINGLE_ACC_STATE;
@@ -640,9 +616,6 @@ int main(int argc, char *argv[]){
     cudaDeviceSynchronize();
     CHECK_KERNELCALL();
 
-    t_end = get_time();
-    t_exe = t_end - t_start;
-
     free(acc_i);
     free(acc_r);
     free(acc4_r);
@@ -653,27 +626,17 @@ int main(int argc, char *argv[]){
     CHECK(cudaMemcpy(sv_i, d_state_vec_i, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_state_vec_i));
     CHECK(cudaFree(d_state_vec_r));
+
+    t_end = get_time();
+    t_exe = t_end - t_start;
     
     free(gate_r);
     free(gate_i);
     free(target);
     free(cnot_arg);
 
-    //long long unsigned max_idx;
-    //float max_p = -1;
-    //float prob;
-
-    /*for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
-        prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
-        if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
-        if(prob > max_p){
-            max_idx = i;
-        }
-    }
     free(sv_r);
     free(sv_i);
-    printf("MOST LIKELY MEASUREMENT: %llu\n",max_idx);
-    */
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);

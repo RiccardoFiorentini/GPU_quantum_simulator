@@ -4,9 +4,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <time.h>
-#include <vector>
 #include <sys/time.h>
-#include <cuda_runtime.h>
 
 #define PI  (2*asin(1))
 #define GATE_MAX_LEN 63
@@ -27,8 +25,6 @@
 #define IS_NOT_CX_OP 127
 #define IS_CX_OP 1
 #define NUMTHREAD 1024
-#define NUMBLOCKS 1
-#define MAX_COSTANT 1927
 
 #define CHECK(call)                                                                       \
 {                                                                                     \
@@ -50,17 +46,13 @@
     }                                                                                 \
 }
 
-typedef struct{
-    float val[4];
-}unitary;
-
-__constant__ unitary d_Ur[MAX_COSTANT];
-__constant__ unitary d_Ui[MAX_COSTANT];
-__constant__ char d_Targ[MAX_COSTANT];
-__constant__ char d_Arg[MAX_COSTANT];
 
 void putb(long long int, int);
 void parse_circuit(char*, int*, int*, float**, float**, char**, char**);
+
+typedef struct{
+    float val[4];
+}unitary;
 
 //function to get the time of day in seconds
 double get_time(){
@@ -77,16 +69,14 @@ __global__ void init_state_vector(float *vr, float *vi, int num_q){
     }
 }
 
-__global__ void gate_costant(float *vr, float *vi, int num_q, int op,  int target){
+__global__ void kernel_gate(float *vr, float *vi, int num_q, unitary Ur, unitary Ui, int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
     long long int pos0, pos1;
-    unitary Ur = d_Ur[op];
-    unitary Ui = d_Ui[op];
     
-    for(int i = th_id; i<(1LLU<<(num_q-1)); i+=NUMTHREAD){
+    if(th_id < (1LLU<<(num_q-1))){
         
-        pos0 = ((i>>target)<<(target+1))|(i&(((1LLU)<<target)-1));
+        pos0 = ((th_id>>target)<<(target+1))|(th_id&(((1LLU)<<target)-1));
         pos1 = pos0|((1LLU)<<target);
 
         tmp0_r = vr[pos0]*Ur.val[0] - vi[pos0]*Ui.val[0] + vr[pos1]*Ur.val[1] - vi[pos1]*Ui.val[1];
@@ -95,6 +85,8 @@ __global__ void gate_costant(float *vr, float *vi, int num_q, int op,  int targe
         tmp1_r = vr[pos0]*Ur.val[2] - vi[pos0]*Ui.val[2] + vr[pos1]*Ur.val[3] - vi[pos1]*Ui.val[3];
         tmp1_i = vr[pos0]*Ui.val[2] + vi[pos0]*Ur.val[2] + vr[pos1]*Ui.val[3] + vi[pos1]*Ur.val[3];
 
+        
+
         vr[pos0] = tmp0_r;
         vr[pos1] = tmp1_r;
         vi[pos0] = tmp0_i;
@@ -102,17 +94,17 @@ __global__ void gate_costant(float *vr, float *vi, int num_q, int op,  int targe
     }
 }
 
-__global__ void cnot(float *vr, float *vi, int num_q, int control, int target){
+__global__ void kernel_cnot(float *vr, float *vi, int num_q, int control, int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
     long long int pos0, pos1;
-    int min_idx, max_idx;
 
-    for(int i = th_id; i<(1LLU<<(num_q-2)); i+=NUMTHREAD){
+    int min_idx, max_idx;
+    if(th_id < (1LLU<<(num_q-2))){
         min_idx = control < target ? control : target;
         max_idx = control > target ? control : target;
 
-        pos0 = ((i>>(max_idx-1))<<(max_idx+1)) | (((i&(((1LLU)<<(max_idx-1))-1))>>min_idx)<<(min_idx+1)) | (i&(((1LLU)<<min_idx)-1)) | (((1LLU)<<control));
+        pos0 = ((th_id>>(max_idx-1))<<(max_idx+1)) | (((th_id&(((1LLU)<<(max_idx-1))-1))>>min_idx)<<(min_idx+1)) | (th_id&(((1LLU)<<min_idx)-1)) | (((1LLU)<<control));
         pos1 = pos0|((1LLU)<<target);
 
         tmp0_r = vr[pos1];
@@ -129,74 +121,17 @@ __global__ void cnot(float *vr, float *vi, int num_q, int control, int target){
     }
 }
 
-//dynamic kernel
-__global__ void kernel_costant(int numOp, int num_q, float *vr, float *vi){ 
-    int numBlocks;
-    if(blockIdx.x*blockDim.x + threadIdx.x == 0){
-        for(int i = 0; i < numOp; i++){
-            if(d_Arg[i] == IS_NOT_CX_OP){
-                numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
-                gate_costant<<<numBlocks, NUMTHREAD>>>(vr, vi, num_q, i, (int)d_Targ[i]);
-            }else{
-                numBlocks = ceil((1LLU<<(num_q-2))/(double)NUMTHREAD);
-                cnot<<<numBlocks, NUMTHREAD>>>(vr, vi, num_q, (int)d_Targ[i], (int)d_Arg[i]);
-            }
-            cudaDeviceSynchronize();
-        }
-    }
-}
-
-void mm2x2(unitary *m1_r, unitary *m2_r, unitary *m1_i, unitary *m2_i){
-    unitary tmp_r;
-    unitary tmp_i;
-    
-    tmp_r.val[0] = m1_r->val[0] * m2_r->val[0] - m1_i->val[0] * m2_i->val[0] + m1_r->val[1] * m2_r->val[2] - m1_i->val[1] * m2_i->val[2];
-    tmp_i.val[0] = m1_r->val[0] * m2_i->val[0] + m1_i->val[0] * m2_r->val[0] + m1_r->val[1] * m2_i->val[2] + m1_i->val[1] * m2_r->val[2];
-
-    tmp_r.val[1] = m1_r->val[0] * m2_r->val[1] - m1_i->val[0] * m2_i->val[1] + m1_r->val[1] * m2_r->val[3] - m1_i->val[1] * m2_i->val[3];
-    tmp_i.val[1] = m1_r->val[0] * m2_i->val[1] + m1_i->val[0] * m2_r->val[1] + m1_r->val[1] * m2_i->val[3] + m1_i->val[1] * m2_r->val[3];
-
-    tmp_r.val[2] = m1_r->val[2] * m2_r->val[0] - m1_i->val[2] * m2_i->val[0] + m1_r->val[3] * m2_r->val[2] - m1_i->val[3] * m2_i->val[2];
-    tmp_i.val[2] = m1_r->val[2] * m2_i->val[0] + m1_i->val[2] * m2_r->val[0] + m1_r->val[3] * m2_i->val[2] + m1_i->val[3] * m2_r->val[2];
-
-    tmp_r.val[3] = m1_r->val[2] * m2_r->val[1] - m1_i->val[2] * m2_i->val[1] + m1_r->val[3] * m2_r->val[3] - m1_i->val[3] * m2_i->val[3];
-    tmp_i.val[3] = m1_r->val[2] * m2_i->val[1] + m1_i->val[2] * m2_r->val[1] + m1_r->val[3] * m2_i->val[3] + m1_i->val[3] * m2_r->val[3];
-
-    memcpy(m2_r, &tmp_r, sizeof(unitary));
-    memcpy(m2_i, &tmp_i, sizeof(unitary));
-}
-
-void initM2(unitary *m_r, unitary *m_i){
-    m_r->val[0]=1;
-    m_r->val[1]=0;
-    m_r->val[2]=0;
-    m_r->val[3]=1;
-
-    m_i->val[0]=0;
-    m_i->val[1]=0;
-    m_i->val[2]=0;
-    m_i->val[3]=0;
-}
-
-bool isIdentity(unitary *m_r, unitary *m_i){
-    return fabs(m_r->val[0]-1)<1e-3 && fabs(m_r->val[1])<1e-3 && fabs(m_r->val[2])<1e-3 && fabs(m_r->val[3]-1)<1e-3 && 
-            fabs(m_i->val[0])<1e-3 && fabs(m_i->val[1])<1e-3 && fabs(m_i->val[2])<1e-3 && fabs(m_i->val[3])<1e-3;
-}
-
 int main(int argc, char *argv[]){
-    int num_q, num_g;
+
+    int num_q, num_g, num_m;
+    double *cumul;
+    long long meas;
     float *gate_r, *gate_i, *d_state_vec_r, *d_state_vec_i;
     char *target, *cnot_arg;
     unitary Ur, Ui;
+    float tmpFloat = 1;
     double t_start, t_end, t_exe;
-    unitary *acc_r;
-    unitary *acc_i;
     float *sv_r, *sv_i;
-
-    float *VecGate_r, *VecGate_i;
-    char *VecTarg, *VecArg;
-    int numOp;
-        
     if(argc < 2){
         printf("QUANTUM CIRCUIT SIMULATOR\n");
         printf("Usage: %s <circuit_file_name>\n",argv[0]);
@@ -206,21 +141,9 @@ int main(int argc, char *argv[]){
     t_start = get_time();
 
     parse_circuit(argv[1], &num_q, &num_g, &gate_r, &gate_i, &target, &cnot_arg);
-    
-    acc_r = (unitary*) malloc(sizeof(unitary)*num_q);
-    acc_i = (unitary*) malloc(sizeof(unitary)*num_q);
-    VecGate_r = (float*) malloc(sizeof(float)*4*num_g);
-    VecGate_i = (float*) malloc(sizeof(float)*4*num_g);
-    VecTarg = (char*)malloc(sizeof(char)*num_g);
-    VecArg  = (char*)malloc(sizeof(char)*num_g);
-    numOp = 0;
 
-    for(int i=0; i<num_q; i++){
-        initM2(&acc_r[i], &acc_i[i]);
-    }
-
-    sv_r = (float*) malloc(sizeof(float)*((1LLU)<<num_q));
-    sv_i = (float*) malloc(sizeof(float)*((1LLU)<<num_q));
+    sv_r = (float*)malloc(sizeof(float)*((1LLU)<<num_q));
+    sv_i = (float*)malloc(sizeof(float)*((1LLU)<<num_q));
 
     CHECK(cudaMalloc(&d_state_vec_r, ((1LLU)<<num_q)*sizeof(float)));
     CHECK(cudaMalloc(&d_state_vec_i, ((1LLU)<<num_q)*sizeof(float)));
@@ -238,132 +161,62 @@ int main(int argc, char *argv[]){
     CHECK_KERNELCALL();
 
     for(int i=0; i<num_g; i++){
+
         if(cnot_arg[i]==IS_NOT_CX_OP){
+            numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
             memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4);
             memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
-            mm2x2(&Ur, &acc_r[target[i]], &Ui, &acc_i[target[i]]);
+            kernel_gate<<<numBlocks, NUMTHREAD>>>(
+                d_state_vec_r,
+                d_state_vec_i,
+                num_q,
+                Ur,
+                Ui,
+                (int)target[i]
+            );
         }else{
-            numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
-            if(!isIdentity(&acc_r[target[i]], &acc_i[target[i]])){
-                VecGate_i[numOp*4] = acc_i[target[i]].val[0];
-                VecGate_i[numOp*4 + 1] = acc_i[target[i]].val[1];
-                VecGate_i[numOp*4 + 2] = acc_i[target[i]].val[2];
-                VecGate_i[numOp*4 + 3] = acc_i[target[i]].val[3];
-
-                VecGate_r[numOp*4] = acc_r[target[i]].val[0];
-                VecGate_r[numOp*4 + 1] = acc_r[target[i]].val[1];
-                VecGate_r[numOp*4 + 2] = acc_r[target[i]].val[2];
-                VecGate_r[numOp*4 + 3] = acc_r[target[i]].val[3];
-
-                VecTarg[numOp] = (int)target[i];
-                VecArg[numOp] = IS_NOT_CX_OP;
-                numOp++;
-                initM2(&acc_r[target[i]], &acc_i[target[i]]);
-            }
-            
-            if(!isIdentity(&acc_r[cnot_arg[i]], &acc_i[cnot_arg[i]])){
-                VecGate_i[numOp*4] = acc_r[cnot_arg[i]].val[0];
-                VecGate_i[numOp*4 + 1] = acc_r[cnot_arg[i]].val[1];
-                VecGate_i[numOp*4 + 2] = acc_r[cnot_arg[i]].val[2];
-                VecGate_i[numOp*4 + 3] = acc_r[cnot_arg[i]].val[3];
-
-                VecGate_r[numOp*4] = acc_i[cnot_arg[i]].val[0];
-                VecGate_r[numOp*4 + 1] = acc_i[cnot_arg[i]].val[1];
-                VecGate_r[numOp*4 + 2] = acc_i[cnot_arg[i]].val[2];
-                VecGate_r[numOp*4 + 3] = acc_i[cnot_arg[i]].val[3];
-
-                VecTarg[numOp] = (int)cnot_arg[i];
-                VecArg[numOp] = IS_NOT_CX_OP;
-                numOp++;
-                initM2(&acc_r[cnot_arg[i]], &acc_i[cnot_arg[i]]);
-            }
-
             numBlocks = ceil((1LLU<<(num_q-2))/(double)NUMTHREAD);
-
-            VecGate_i[numOp*4] = 0;
-            VecGate_i[numOp*4 + 1] = 0;
-            VecGate_i[numOp*4 + 2] = 0;
-            VecGate_i[numOp*4 + 3] = 0;
-
-            VecGate_r[numOp*4] = 0;
-            VecGate_r[numOp*4 + 1] = 0;
-            VecGate_r[numOp*4 + 2] = 0;
-            VecGate_r[numOp*4 + 3] = 0;
-
-            VecTarg[numOp] = (int)target[i];
-            VecArg[numOp] = (int)cnot_arg[i];
-            numOp++;
+            kernel_cnot<<<numBlocks, NUMTHREAD>>>(
+                d_state_vec_r,
+                d_state_vec_i,
+                num_q,
+                (int)target[i],
+                (int)cnot_arg[i]
+            );
         }
-
+        //cudaDeviceSynchronize();
+        CHECK_KERNELCALL();
     }
-
-    for(int i=0; i<num_q; i++){
-        if(!isIdentity(&acc_r[i], &acc_i[i])){
-            VecGate_i[numOp*4] = acc_i[i].val[0];
-            VecGate_i[numOp*4 + 1] = acc_i[i].val[1];
-            VecGate_i[numOp*4 + 2] = acc_i[i].val[2];
-            VecGate_i[numOp*4 + 3] = acc_i[i].val[3];
-
-            VecGate_r[numOp*4] = acc_r[i].val[0];
-            VecGate_r[numOp*4 + 1] = acc_r[i].val[1];
-            VecGate_r[numOp*4 + 2] = acc_r[i].val[2];
-            VecGate_r[numOp*4 + 3] = acc_r[i].val[3];
-
-            VecTarg[numOp] = i;
-            VecArg[numOp] = IS_NOT_CX_OP;
-            numOp++;
-        }
-    }
-
-    int op_done = 0;
-    int round_op;
-
-    while(op_done < numOp){
-        round_op = (numOp - op_done) > MAX_COSTANT ? MAX_COSTANT : (numOp - op_done);
-
-        cudaMemcpyToSymbol(d_Arg, VecArg + op_done, round_op*sizeof(char));
-        cudaMemcpyToSymbol(d_Targ, VecTarg + op_done, round_op*sizeof(char));
-        cudaMemcpyToSymbol(d_Ui, VecGate_i + op_done*4, round_op*sizeof(float)*4);
-        cudaMemcpyToSymbol(d_Ur, VecGate_r + op_done*4, round_op*sizeof(float)*4);
-
-        kernel_costant<<<1, 1>>>(
-            round_op,
-            num_q,
-            d_state_vec_r,
-            d_state_vec_i
-        );
-
-        op_done += round_op;
-
-        cudaDeviceSynchronize();
-    }
-
-    //free di VecGate,VecTarg...
-    free(VecGate_i);
-    free(VecGate_r);
-    free(VecTarg);
-    free(VecArg);       
-    free(acc_i);
-    free(acc_r);
-
+    cudaDeviceSynchronize();
+    t_end = get_time();
+    t_exe = t_end - t_start;
     CHECK(cudaMemcpy(sv_r, d_state_vec_r, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpy(sv_i, d_state_vec_i, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_state_vec_i));
     CHECK(cudaFree(d_state_vec_r));
     
-    t_end = get_time();
-    t_exe = t_end - t_start;
-
     free(gate_r);
     free(gate_i);
     free(target);
-    free(cnot_arg);
-    
-    free(sv_r);
-    free(sv_i);
-    
-    //printf("Execution time: %lf\n", t_exe);
+    free(cnot_arg); 
+
+    long long unsigned max_idx;
+    float max_p = -1;
+    float prob;
+
+    /*for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
+        prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
+        if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
+        if(prob > max_p){
+            max_p = prob;
+            max_idx = i;
+        }
+    }*/
+
+    //printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
     printf("%lf\n", t_exe);
+    free(sv_i);
+    free(sv_r);
 
     return 0;
 }
@@ -371,6 +224,8 @@ int main(int argc, char *argv[]){
 void parse_circuit(char *filename, int *num_q, int *num_g, float **gate_r, float **gate_i, char **target, char **cnot_arg){
     FILE *f;
     char c;
+    int qubit_num = 0;
+    int curr_qubit,curr_qubit2;
     char gate_name[GATE_MAX_LEN+1];
     int str_l;
     float arg;

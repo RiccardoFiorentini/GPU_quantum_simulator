@@ -73,17 +73,11 @@ __global__ void init_state_vector(float *vr, float *vi, int num_q){
     }
 }
 
+//2x2 gates kernel
 __global__ void kernel_gate_2(float *vr, float *vi, int num_q, unitary Ur, unitary Ui, int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
     long long int pos0, pos1;
-
-    /* if(th_id == 0 && Ur.val[0]!=1.0){
-        printf("%f, %f, %f, %f \n", Ur.val[0], Ur.val[1], Ur.val[2], Ur.val[3]);
-        printf("%f, %f, %f, %f \n", Ui.val[0], Ui.val[1], Ui.val[2], Ui.val[3]);
-
-        printf("\n");
-    } */
     
     if(th_id < (1LLU<<(num_q-1))){
         
@@ -103,45 +97,7 @@ __global__ void kernel_gate_2(float *vr, float *vi, int num_q, unitary Ur, unita
     }
 }
 
-__global__ void kernel_gate_4(float *vr, float *vi, int num_q, unitary4 Ur, unitary4 Ui, int target1, int target2){
-    float tmp00_r, tmp00_i, tmp01_r, tmp01_i, tmp10_r, tmp10_i, tmp11_r, tmp11_i;
-    int th_id = blockIdx.x*blockDim.x + threadIdx.x;
-    long long int pos00, pos01, pos10, pos11;
-    int min_idx, max_idx;
-
-    if(th_id < (1LLU<<(num_q-1))){
-        min_idx = target1 < target2 ? target1 : target2;
-        max_idx = target1 > target2 ? target1 : target2;
-
-        pos00 = ((th_id>>(max_idx-1))<<(max_idx+1)) | (((th_id&(((1LLU)<<(max_idx-1))-1))>>min_idx)<<(min_idx+1)) | (th_id&(((1LLU)<<min_idx)-1));
-        pos01 = pos00|((1LLU)<<target2);
-        pos10 = pos00|((1LLU)<<target1);
-        pos11 = pos10|((1LLU)<<target2);
-        
-        tmp00_r = vr[pos00]*Ur.val[0] - vi[pos00]*Ui.val[0] + vr[pos01]*Ur.val[1] - vi[pos01]*Ui.val[1] + vr[pos10]*Ur.val[2] - vi[pos10]*Ui.val[2] + vr[pos11]*Ur.val[3] - vi[pos11]*Ui.val[3];
-        tmp00_i = vr[pos00]*Ui.val[0] + vi[pos00]*Ur.val[0] + vr[pos01]*Ui.val[1] + vi[pos01]*Ur.val[1] + vr[pos10]*Ui.val[2] + vi[pos10]*Ur.val[2] + vr[pos11]*Ui.val[3] + vi[pos11]*Ur.val[3];
-
-        tmp01_r = vr[pos00]*Ur.val[4] - vi[pos00]*Ui.val[4] + vr[pos01]*Ur.val[5] - vi[pos01]*Ui.val[5] + vr[pos10]*Ur.val[6] - vi[pos10]*Ui.val[6] + vr[pos11]*Ur.val[7] - vi[pos11]*Ui.val[7];
-        tmp01_i = vr[pos00]*Ui.val[4] + vi[pos00]*Ur.val[4] + vr[pos01]*Ui.val[5] + vi[pos01]*Ur.val[5] + vr[pos10]*Ui.val[6] + vi[pos10]*Ur.val[6] + vr[pos11]*Ui.val[7] + vi[pos11]*Ur.val[7];
-
-        tmp10_r = vr[pos00]*Ur.val[8] - vi[pos00]*Ui.val[8] + vr[pos01]*Ur.val[9] - vi[pos01]*Ui.val[9] + vr[pos10]*Ur.val[10] - vi[pos10]*Ui.val[10] + vr[pos11]*Ur.val[11] - vi[pos11]*Ui.val[11];
-        tmp10_i = vr[pos00]*Ui.val[8] + vi[pos00]*Ur.val[8] + vr[pos01]*Ui.val[9] + vi[pos01]*Ur.val[9] + vr[pos10]*Ui.val[10] + vi[pos10]*Ur.val[10] + vr[pos11]*Ui.val[11] + vi[pos11]*Ur.val[11];
-
-        tmp11_r = vr[pos00]*Ur.val[12] - vi[pos00]*Ui.val[12] + vr[pos01]*Ur.val[13] - vi[pos01]*Ui.val[13] + vr[pos10]*Ur.val[14] - vi[pos10]*Ui.val[14] + vr[pos11]*Ur.val[15] - vi[pos11]*Ui.val[15];
-        tmp11_i = vr[pos00]*Ui.val[12] + vi[pos00]*Ur.val[12] + vr[pos01]*Ui.val[13] + vi[pos01]*Ur.val[13] + vr[pos10]*Ui.val[14] + vi[pos10]*Ur.val[14] + vr[pos11]*Ui.val[15] + vi[pos11]*Ur.val[15];
-
-        vr[pos00] = tmp00_r;
-        vr[pos01] = tmp01_r;
-        vr[pos10] = tmp10_r;
-        vr[pos11] = tmp11_r;
-        
-        vi[pos00] = tmp00_i;
-        vi[pos01] = tmp01_i;
-        vi[pos10] = tmp10_i;
-        vi[pos11] = tmp11_i;
-    }
-}
-
+//cnot gate kernel
 __global__ void kernel_cnot(float *vr, float *vi, int num_q, int control, int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
@@ -261,18 +217,6 @@ int main(int argc, char *argv[]){
             memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4);
             memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
             mm2x2(&Ur, &acc_r[target[i]], &Ui, &acc_i[target[i]]);
-
-            /* numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
-            memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4);
-            memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
-            kernel_gate_2<<<numBlocks, NUMTHREAD>>>(
-               d_state_vec_r,
-               d_state_vec_i,
-               num_q,
-               Ur,
-               Ui,
-               (int)target[i]
-            ); */
         }else{
             numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
             if(!isIdentity(&acc_r[target[i]], &acc_i[target[i]])){
@@ -308,8 +252,6 @@ int main(int argc, char *argv[]){
                 (int)cnot_arg[i]
             );
         }
-        //cudaDeviceSynchronize();
-        //CHECK_KERNELCALL();
     }
 
     numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
@@ -327,8 +269,6 @@ int main(int argc, char *argv[]){
     }
 
     cudaDeviceSynchronize();
-    t_end = get_time();
-    t_exe = t_end - t_start;
 
     free(acc_i);
     free(acc_r);
@@ -337,29 +277,18 @@ int main(int argc, char *argv[]){
     CHECK(cudaMemcpy(sv_i, d_state_vec_i, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_state_vec_i));
     CHECK(cudaFree(d_state_vec_r));
+
+    t_end = get_time();
+    t_exe = t_end - t_start;
     
     free(gate_r);
     free(gate_i);
     free(target);
     free(cnot_arg);
 
-    /* long long unsigned max_idx;
-    float max_p = -1;
-    float prob;
-
-    for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
-        prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
-        if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
-        if(prob > max_p){
-            max_p = prob;
-            max_idx = i;
-        }
-    }
     free(sv_r);
     free(sv_i);
-    printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
-    */
-    
+   
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);
 

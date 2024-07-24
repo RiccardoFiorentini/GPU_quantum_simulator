@@ -77,6 +77,7 @@ __global__ void init_state_vector(float *vr, float *vi, int num_q){
     }
 }
 
+//gate called for costant memory
 __device__ void gate_costant(float *vr, float *vi, int num_q, int op,  int target){
     float tmp0_r, tmp0_i, tmp1_r, tmp1_i;
     int th_id = blockIdx.x*blockDim.x + threadIdx.x;
@@ -187,7 +188,6 @@ int main(int argc, char *argv[]){
     unitary *acc_i;
     float *sv_r, *sv_i;
 
-    //Salva operazioni in ordine, da vedere come trasformare in array
     float *VecGate_r, *VecGate_i;
     char *VecTarg, *VecArg;
     int numOp;
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]){
 
     for(int i=0; i<num_g; i++){
         if(cnot_arg[i]==IS_NOT_CX_OP){
-            memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4); //necessario? se passassimo direttamente gate_r[i*4]?
+            memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4); 
             memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
             mm2x2(&Ur, &acc_r[target[i]], &Ui, &acc_i[target[i]]);
         }else{
@@ -289,10 +289,8 @@ int main(int argc, char *argv[]){
             VecArg[numOp] = (int)cnot_arg[i];
             numOp++;
         }
-        //CHECK_KERNELCALL();
     }
 
-    //numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
     for(int i=0; i<num_q; i++){
         if(!isIdentity(&acc_r[i], &acc_i[i])){
             VecGate_i[numOp*4] = acc_i[i].val[0];
@@ -335,9 +333,6 @@ int main(int argc, char *argv[]){
 
         cudaDeviceSynchronize();
     }
-    
-    t_end = get_time();
-    t_exe = t_end - t_start;
 
     //free di VecGate,VecTarg...
     free(VecGate_i);
@@ -351,29 +346,17 @@ int main(int argc, char *argv[]){
     CHECK(cudaMemcpy(sv_i, d_state_vec_i, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_state_vec_i));
     CHECK(cudaFree(d_state_vec_r));
+
+    t_end = get_time();
+    t_exe = t_end - t_start;
     
     free(gate_r);
     free(gate_i);
     free(target);
     free(cnot_arg);
 
-    /*
-    long long unsigned max_idx;
-    float max_p = -1;
-    float prob;
-
-    for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
-        prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
-        if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
-        if(prob > max_p){
-            max_p = prob;
-            max_idx = i;
-        }
-    }
     free(sv_r);
     free(sv_i);
-    printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
-    */
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);

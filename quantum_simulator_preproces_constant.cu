@@ -177,6 +177,7 @@ __global__ void kernel_costant(int numOp, int num_q, float *vr, float *vi){
     }
 }
 
+//for texture memory
 __global__ void kernel_texture(int numOp, int num_q, float *vr, float *vi, cudaTextureObject_t texArg, cudaTextureObject_t texTarg, cudaTextureObject_t texUi, cudaTextureObject_t texUr){
     for(int i = 0; i < numOp; i++){
         
@@ -240,7 +241,6 @@ int main(int argc, char *argv[]){
     float* d_Tex_Ui;
     float* d_Tex_Ur;
 
-    //Salva operazioni in ordine, da vedere come trasformare in array
     float *VecGate_r, *VecGate_i;
     char *VecTarg, *VecArg;
     int numOp;
@@ -287,28 +287,12 @@ int main(int argc, char *argv[]){
 
     for(int i=0; i<num_g; i++){
         if(cnot_arg[i]==IS_NOT_CX_OP){
-            memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4); //necessario? se passassimo direttamente gate_r[i*4]?
-            memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
-            mm2x2(&Ur, &acc_r[target[i]], &Ui, &acc_i[target[i]]);
-
-            /* numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
             memcpy(&Ur.val, &(gate_r[i*4]), sizeof(float)*4);
             memcpy(&Ui.val, &(gate_i[i*4]), sizeof(float)*4);
-            kernel_gate_2<<<numBlocks, NUMTHREAD>>>(
-               d_state_vec_r,
-               d_state_vec_i,
-               num_q,
-               Ur,
-               Ui,
-               (int)target[i]
-            ); */
+            mm2x2(&Ur, &acc_r[target[i]], &Ui, &acc_i[target[i]]);
         }else{
             numBlocks = ceil((1LLU<<(num_q-1))/(double)NUMTHREAD);
             if(!isIdentity(&acc_r[target[i]], &acc_i[target[i]])){
-                //inserire operazione
-                /*unitary *VecGate_r, *VecGate_i;
-                float *VecTarg, *VecArg;
-                int numOp;*/
 
                 VecGate_i[numOp*4] = acc_i[target[i]].val[0];
                 VecGate_i[numOp*4 + 1] = acc_i[target[i]].val[1];
@@ -324,14 +308,6 @@ int main(int argc, char *argv[]){
                 VecArg[numOp] = IS_NOT_CX_OP;
                 numOp++;
 
-                /*kernel_gate_2<<<numBlocks, NUMTHREAD>>>(
-                    d_state_vec_r,
-                    d_state_vec_i,
-                    num_q,
-                    acc_r[target[i]],
-                    acc_i[target[i]],
-                    (int)target[i]
-                );*/
                 initM2(&acc_r[target[i]], &acc_i[target[i]]);
             }
             
@@ -349,14 +325,7 @@ int main(int argc, char *argv[]){
                 VecTarg[numOp] = (int)cnot_arg[i];
                 VecArg[numOp] = IS_NOT_CX_OP;
                 numOp++;
-                /*kernel_gate_2<<<numBlocks, NUMTHREAD>>>(
-                    d_state_vec_r,
-                    d_state_vec_i,
-                    num_q,
-                    acc_r[cnot_arg[i]],
-                    acc_i[cnot_arg[i]],
-                    (int)cnot_arg[i]
-                );*/
+
                 initM2(&acc_r[cnot_arg[i]], &acc_i[cnot_arg[i]]);
             }
 
@@ -376,15 +345,7 @@ int main(int argc, char *argv[]){
             VecArg[numOp] = (int)cnot_arg[i];
             numOp++;
 
-            /*kernel_cnot<<<numBlocks, NUMTHREAD>>>(
-                d_state_vec_r,
-                d_state_vec_i,
-                num_q,
-                (int)target[i],
-                (int)cnot_arg[i]
-            );*/
         }
-        //cudaDeviceSynchronize();
         CHECK_KERNELCALL();
     }
 
@@ -404,20 +365,11 @@ int main(int argc, char *argv[]){
             VecTarg[numOp] = i;
             VecArg[numOp] = IS_NOT_CX_OP;
             numOp++;
-            /*kernel_gate_2<<<numBlocks, NUMTHREAD>>>(
-                d_state_vec_r,
-                d_state_vec_i,
-                num_q,
-                acc_r[i],
-                acc_i[i],
-                i
-            );*/
         }
     }
 
     if(numOp>MAX_COSTANT){
-        //printf("Sei in TEXTURE \n");
-        //usa texture
+        //texture case
         cudaMalloc((void**)&d_Tex_Arg, numOp * sizeof(char));
         cudaMalloc((void**)&d_Tex_Targ, numOp * sizeof(char));
         cudaMalloc((void**)&d_Tex_Ui, numOp * sizeof(float)*4);
@@ -428,12 +380,12 @@ int main(int argc, char *argv[]){
         cudaMemcpy(d_Tex_Ui, VecGate_i, numOp * sizeof(float)*4, cudaMemcpyHostToDevice);
         cudaMemcpy(d_Tex_Ur, VecGate_r, numOp * sizeof(float)*4, cudaMemcpyHostToDevice);
 
-        // Creazione della descrizione della risorsa
+        //Resource description
         cudaResourceDesc resDesc;
         memset(&resDesc, 0, sizeof(resDesc));
         resDesc.resType = cudaResourceTypeLinear;
 
-        // Descrizione della texture
+        //Texture description
         cudaTextureDesc texDesc;
         memset(&texDesc, 0, sizeof(texDesc));
         texDesc.addressMode[0] = cudaAddressModeClamp;
@@ -441,7 +393,7 @@ int main(int argc, char *argv[]){
         texDesc.readMode = cudaReadModeElementType;
         texDesc.normalizedCoords = 0;
 
-        // Creazione del Texture Object per d_Tex_Arg
+        //Texture Object creation for d_Tex_Arg
         resDesc.res.linear.devPtr = d_Tex_Arg;
         resDesc.res.linear.desc.f = cudaChannelFormatKindUnsigned;
         resDesc.res.linear.desc.x = 8; // 8 bit per char
@@ -449,12 +401,12 @@ int main(int argc, char *argv[]){
         cudaTextureObject_t texArg = 0;
         cudaCreateTextureObject(&texArg, &resDesc, &texDesc, NULL);
 
-        // Creazione del Texture Object per d_Tex_Targ
+        //Texture Object creation for d_Tex_Targ
         resDesc.res.linear.devPtr = d_Tex_Targ;
         cudaTextureObject_t texTarg = 0;
         cudaCreateTextureObject(&texTarg, &resDesc, &texDesc, NULL);
 
-        // Creazione del Texture Object per d_Tex_Ui
+        //Texture Object creation for d_Tex_Ui
         resDesc.res.linear.devPtr = d_Tex_Ui;
         resDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
         resDesc.res.linear.desc.x = 32; // 32 bit per float
@@ -462,7 +414,7 @@ int main(int argc, char *argv[]){
         cudaTextureObject_t texUi = 0;
         cudaCreateTextureObject(&texUi, &resDesc, &texDesc, NULL);
 
-        // Creazione del Texture Object per d_Tex_Ur
+        //Texture Object creation for d_Tex_Ur
         resDesc.res.linear.devPtr = d_Tex_Ur;
         cudaTextureObject_t texUr = 0;
         cudaCreateTextureObject(&texUr, &resDesc, &texDesc, NULL);
@@ -480,27 +432,25 @@ int main(int argc, char *argv[]){
 
         cudaDeviceSynchronize();
 
-        // Distruzione dei Texture Objects
+        //Destroy Texture Objects
         cudaDestroyTextureObject(texArg);
         cudaDestroyTextureObject(texTarg);
         cudaDestroyTextureObject(texUi);
         cudaDestroyTextureObject(texUr);
 
-        // Deallocazione della memoria
         cudaFree(d_Tex_Arg);
         cudaFree(d_Tex_Targ);
         cudaFree(d_Tex_Ui);
         cudaFree(d_Tex_Ur);
 
     }else{
-        //printf("Sei in COSTANT \n");
-        //passa a GPU in constant mem l'elenco di operazioni -> da vedere come fare per la costant
+        //costant case
         cudaMemcpyToSymbol(d_Arg, VecArg, numOp*sizeof(char));
         cudaMemcpyToSymbol(d_Targ, VecTarg, numOp*sizeof(char));
         cudaMemcpyToSymbol(d_Ui, VecGate_i, numOp*sizeof(unitary));
         cudaMemcpyToSymbol(d_Ur, VecGate_r, numOp*sizeof(unitary));
 
-        //lancio kernel
+        //kernel launch
         kernel_costant<<<NUMBLOCKS, NUMTHREAD>>>(
             numOp,
             num_q,
@@ -510,9 +460,6 @@ int main(int argc, char *argv[]){
 
         cudaDeviceSynchronize();
     }
-    
-    t_end = get_time();
-    t_exe = t_end - t_start;
 
     //free di VecGate,VecTarg...
     free(VecGate_i);
@@ -526,28 +473,17 @@ int main(int argc, char *argv[]){
     CHECK(cudaMemcpy(sv_i, d_state_vec_i, ((1LLU)<<num_q)*sizeof(float), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_state_vec_i));
     CHECK(cudaFree(d_state_vec_r));
+
+    t_end = get_time();
+    t_exe = t_end - t_start;
     
     free(gate_r);
     free(gate_i);
     free(target);
     free(cnot_arg);
 
-    //long long unsigned max_idx;
-    //float max_p = -1;
-    //float prob;
-
-    /*for(long long unsigned i = 0; i<((1LLU)<<num_q); i++){
-        prob = sv_r[i]*sv_r[i] + sv_i[i]*sv_i[i];
-        //if(prob>0) printf("%llu : %f + %f i\n",i,sv_r[i],sv_i[i]);
-        if(prob > max_p){
-            max_p = prob;
-            max_idx = i;
-        }
-    }
     free(sv_r);
     free(sv_i);
-    printf("MOST LIKELY MEASUREMENT: %llu (%f)\n",max_idx,max_p);
-    */
     
     //printf("Execution time: %lf\n", t_exe);
     printf("%lf\n", t_exe);
